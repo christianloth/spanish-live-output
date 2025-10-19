@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """
-Real-time Spanish Speech-to-Text using Faster-Whisper
+Real-time Spanish Speech-to-Text using OpenAI Whisper (Local)
 Captures live audio and transcribes with low latency
 """
 
 import sounddevice as sd
 import numpy as np
-from faster_whisper import WhisperModel
+import whisper
 from datetime import datetime
 import sys
 import queue
+import threading
 
 class SpanishLiveTranscriber:
     def __init__(
         self,
-        model_size="base",
-        device="cpu",
-        compute_type="int8",
+        model_size="turbo",
         sample_rate=16000,
         chunk_duration=3.0,
     ):
@@ -24,12 +23,9 @@ class SpanishLiveTranscriber:
         self.chunk_duration = chunk_duration
         self.chunk_samples = int(sample_rate * chunk_duration)
 
-        print(f"Loading Whisper model: {model_size}")
-        self.model = WhisperModel(
-            model_size,
-            device=device,
-            compute_type=compute_type
-        )
+        print(f"Loading OpenAI Whisper model: {model_size}")
+        print("This may take a moment on first run (downloading model)...")
+        self.model = whisper.load_model(model_size)
         print("Model loaded successfully\n")
 
         self.audio_queue = queue.Queue()
@@ -43,34 +39,29 @@ class SpanishLiveTranscriber:
     def transcribe_chunk(self, audio_chunk):
         audio_float32 = audio_chunk.flatten().astype(np.float32)
 
-        segments, info = self.model.transcribe(
-            audio_float32,
-            language="es",
-            beam_size=1,
-            vad_filter=True,
-            vad_parameters={
-                "threshold": 0.5,
-                "min_speech_duration_ms": 250,
-                "min_silence_duration_ms": 500
-            },
-            condition_on_previous_text=False
-        )
+        try:
+            result = self.model.transcribe(
+                audio_float32,
+                language="es",
+                temperature=0.0,
+                no_speech_threshold=0.6,
+                condition_on_previous_text=False,
+                fp16=False
+            )
 
-        segments_list = list(segments)
+            if result["text"].strip():
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                text = result["text"].strip()
+                print(f"[{timestamp}] {text}")
+                sys.stdout.flush()
 
-        if segments_list:
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            for segment in segments_list:
-                text = segment.text.strip()
-                if text:
-                    confidence = 1.0 - segment.no_speech_prob
-                    print(f"[{timestamp}] ({confidence:.2f}) {text}")
-                    sys.stdout.flush()
+        except Exception as e:
+            print(f"Transcription error: {e}", file=sys.stderr)
 
     def start(self):
         self.is_running = True
 
-        print("🎤 Real-time Spanish Transcription Active")
+        print("Real-time Spanish Transcription Active")
         print(f"Sample Rate: {self.sample_rate} Hz")
         print(f"Chunk Duration: {self.chunk_duration}s")
         print("Press Ctrl+C to stop\n")
@@ -97,7 +88,12 @@ class SpanishLiveTranscriber:
                             audio_data = np.concatenate(audio_buffer)
                             audio_buffer = []
 
-                            self.transcribe_chunk(audio_data)
+                            transcribe_thread = threading.Thread(
+                                target=self.transcribe_chunk,
+                                args=(audio_data,),
+                                daemon=True
+                            )
+                            transcribe_thread.start()
 
                     except queue.Empty:
                         continue
@@ -112,9 +108,7 @@ class SpanishLiveTranscriber:
 
 def main():
     transcriber = SpanishLiveTranscriber(
-        model_size="base",
-        device="cpu",
-        compute_type="int8",
+        model_size="turbo",
         chunk_duration=3.0
     )
 

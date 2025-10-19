@@ -1,10 +1,10 @@
 [project]
 name = "spanish-live-output"
 version = "0.1.0"
-description = "Real-time Spanish speech-to-text transcription using Faster-Whisper"
+description = "Real-time Spanish speech-to-text transcription using OpenAI Whisper (Local)"
 requires-python = ">=3.13"
 dependencies = [
-    "faster-whisper>=1.0.0",
+    "openai-whisper>=20250625",
     "sounddevice>=0.4.0",
     "numpy>=1.24.0"
 ]

@@ -33,3 +33,8 @@ build/
 *.egg-info/
 
 *.log
+
+whisper_*/
+*.wav
+*.mp3
+*.m4a

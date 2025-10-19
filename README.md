@@ -1,62 +1,31 @@
 # Spanish Live Transcription
 
-Real-time Spanish speech-to-text using Faster-Whisper
-
-## Features
-
-- Live audio capture from microphone
-- Real-time Spanish transcription
-- Low latency (1-2 seconds)
-- Timestamped output with confidence scores
-- VAD filtering for silence removal
+Real-time Spanish speech-to-text using OpenAI Whisper (local)
 
 ## Installation
 
 ```bash
-uv pip install faster-whisper sounddevice numpy
+uv sync
 ```
 
 ## Usage
 
 ```bash
-python spanish_live_transcription.py
+uv run python spanish_live_transcription.py
 ```
-
-Press Ctrl+C to stop
 
 ## How It Works
 
-**Audio Capture**: Captures 3-second audio chunks at 16kHz
-**VAD Processing**: Filters silence (>500ms) → reduces noise
-**Transcription**: Faster-Whisper base model transcribes Spanish
-**Output**: Timestamped text with confidence scores
+Captures 3-second audio chunks from your microphone and transcribes them using OpenAI's Whisper model running locally on your CPU. No internet required after initial model download.
 
-## Configuration
+**Models:**
+- `turbo` - 1.5GB, fastest, best quality (default)
+- `base` - 74MB, very fast
+- `small` - 244MB, fast
+- `medium` - 769MB, slow
+- `large-v3` - 1.5GB, slowest
 
-Edit `spanish_live_transcription.py`:
+**Chunk Duration:**
+- Lower (2s) = faster response
+- Higher (5s) = better context
 
-```python
-transcriber = SpanishLiveTranscriber(
-    model_size="base",        # Options: tiny, base, small, medium, large
-    device="cpu",             # Options: cpu, cuda
-    compute_type="int8",      # Options: int8, float16, float32
-    chunk_duration=3.0        # Seconds per chunk (lower = faster, less context)
-)
-```
-
-**Model Size vs Performance**:
-- `tiny`: Fastest, lowest accuracy
-- `base`: Balanced (recommended)
-- `small`: Better accuracy, 2x slower
-- `medium/large`: Highest accuracy, significantly slower
-
-**Chunk Duration**:
-- Smaller (1-2s): Lower latency, may miss context
-- Larger (4-6s): Better context, higher latency
-
-## Requirements
-
-- Python ≥3.13
-- Microphone access
-- ~200MB disk (base model)
-- ~1-2GB RAM during operation
